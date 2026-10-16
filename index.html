@@ -1,0 +1,1325 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Lumina Jewels: Scientific Healing Color Sort</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Montserrat:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #04060f;
+            --bg-gradient-inner: #0d1224;
+            --bg-gradient-outer: #030408;
+            --gold-light: #fef08a;
+            --gold-primary: #d4af37;
+            --theme-accent: #d4af37;
+            --glass-bg: rgba(14, 18, 32, 0.65);
+            --glass-border: rgba(212, 175, 55, 0.25);
+            --text-main: #f1f5f9;
+            --text-sub: #94a3b8;
+            --pulse-scale: 1;
+            --pulse-opacity: 0.15;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            margin: 0;
+            padding: 0;
+            touch-action: manipulation;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            background: radial-gradient(circle at 50% 30%, var(--bg-gradient-inner) 0%, var(--bg-gradient-outer) 100%);
+            color: var(--text-main);
+            font-family: 'Montserrat', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+            transition: background 1.5s ease;
+        }
+
+        #fx-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .breathing-halo {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(var(--pulse-scale));
+            width: 500px;
+            height: 500px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(212, 175, 55, var(--pulse-opacity)) 0%, rgba(56, 189, 248, 0) 70%);
+            pointer-events: none;
+            z-index: 0;
+            transition: transform 0.1s linear, opacity 0.1s linear, background 1.5s ease;
+        }
+
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px 15px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.6s ease, transform 0.6s ease;
+            transform: scale(0.98);
+        }
+
+        .screen.active {
+            opacity: 1;
+            pointer-events: auto;
+            transform: scale(1);
+        }
+
+        /* ----- お洒落なロード画面 overlay ----- */
+        #loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(4, 6, 15, 0.92);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            z-index: 200;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 30px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        #loading-screen.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .loader-gem-wrapper {
+            position: relative;
+            width: 80px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 25px;
+        }
+
+        .loader-gem {
+            width: 45px;
+            height: 45px;
+            background: radial-gradient(circle at 35% 35%, var(--gold-light), var(--theme-accent));
+            clip-path: polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%);
+            box-shadow: 0 0 30px var(--theme-accent);
+            animation: gemPulse 2.5s infinite ease-in-out;
+        }
+
+        .loader-ring {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-top-color: var(--theme-accent);
+            border-radius: 50%;
+            animation: spinRing 3s linear infinite;
+        }
+
+        @keyframes gemPulse {
+            0%, 100% { transform: scale(0.9); opacity: 0.7; filter: drop-shadow(0 0 8px var(--theme-accent)); }
+            50% { transform: scale(1.1); opacity: 1; filter: drop-shadow(0 0 20px var(--theme-accent)); }
+        }
+
+        @keyframes spinRing {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-title {
+            font-family: 'Cinzel', serif;
+            font-size: 0.9rem;
+            letter-spacing: 4px;
+            color: var(--gold-light);
+            margin-bottom: 20px;
+            opacity: 0.8;
+        }
+
+        .column-box {
+            max-width: 480px;
+            width: 100%;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 20px 24px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            transition: border-color 1.5s ease;
+        }
+
+        .column-label {
+            font-family: 'Cinzel', serif;
+            font-size: 0.7rem;
+            letter-spacing: 3px;
+            color: var(--theme-accent);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+
+        .column-title {
+            font-size: 0.95rem;
+            color: var(--text-main);
+            font-weight: 500;
+            margin-bottom: 8px;
+            letter-spacing: 1px;
+        }
+
+        .column-text {
+            font-size: 0.8rem;
+            color: var(--text-sub);
+            line-height: 1.6;
+            font-weight: 300;
+        }
+
+        /* ----- UIコンポーネント ----- */
+        h1, h2 {
+            font-family: 'Cinzel', serif;
+            letter-spacing: 5px;
+            background: linear-gradient(135deg, #ffffff 0%, var(--gold-light) 50%, var(--theme-accent) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 20px rgba(212, 175, 55, 0.3);
+            transition: background 1.5s ease;
+        }
+
+        .btn-action {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            color: var(--gold-light);
+            padding: 12px 28px;
+            font-size: 0.9rem;
+            letter-spacing: 2px;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Cinzel', serif;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            backdrop-filter: blur(12px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+        }
+
+        .btn-action:hover {
+            background: var(--theme-accent);
+            color: #000;
+            border-color: var(--gold-light);
+            box-shadow: 0 0 20px rgba(212, 175, 55, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .icon-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            color: var(--theme-accent);
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+        }
+
+        .icon-btn:hover, .icon-btn.active {
+            background: rgba(212, 175, 55, 0.2);
+            box-shadow: 0 0 12px rgba(212, 175, 55, 0.4);
+        }
+
+        .breath-guide {
+            font-size: 0.75rem;
+            letter-spacing: 2px;
+            color: var(--theme-accent);
+            font-family: 'Cinzel', serif;
+            text-align: center;
+            height: 18px;
+            transition: color 1.5s ease;
+        }
+
+        .realm-tag {
+            font-family: 'Cinzel', serif;
+            font-size: 0.8rem;
+            letter-spacing: 3px;
+            color: var(--theme-accent);
+            opacity: 0.9;
+            margin-top: 4px;
+            transition: color 1.5s ease;
+        }
+
+        /* ----- 各画面 ----- */
+        #home-screen {
+            justify-content: center;
+            gap: 35px;
+            text-align: center;
+        }
+
+        .home-title-box h1 {
+            font-size: 2.6rem;
+            margin-bottom: 8px;
+        }
+
+        .home-title-box p {
+            color: var(--text-sub);
+            letter-spacing: 3px;
+            font-size: 0.85rem;
+        }
+
+        .home-menu {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            width: 260px;
+        }
+
+        .stage-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 800px;
+            margin-bottom: 15px;
+        }
+
+        .stage-grid {
+            flex: 1;
+            width: 100%;
+            max-width: 800px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+            gap: 12px;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .stage-card {
+            aspect-ratio: 1;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Cinzel', serif;
+            position: relative;
+        }
+
+        .stage-card:hover {
+            border-color: var(--gold-light);
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(212, 175, 55, 0.3);
+        }
+
+        .stage-card.locked {
+            opacity: 0.3;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none !important;
+        }
+
+        .stage-card.milestone {
+            border-color: var(--theme-accent);
+            box-shadow: inset 0 0 10px rgba(212, 175, 55, 0.2);
+        }
+
+        .titles-container {
+            flex: 1;
+            width: 100%;
+            max-width: 700px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .title-card {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .title-card.unlocked {
+            border-color: var(--theme-accent);
+            box-shadow: 0 0 15px rgba(212, 175, 55, 0.15);
+        }
+
+        .title-card.locked {
+            opacity: 0.4;
+            filter: grayscale(100%);
+        }
+
+        header {
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(16px);
+            padding: 14px 20px;
+            border-radius: 20px;
+            border: 1px solid var(--glass-border);
+            transition: border-color 1.5s ease;
+        }
+
+        .game-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            color: var(--text-sub);
+            letter-spacing: 1px;
+        }
+
+        .status-val {
+            color: var(--gold-light);
+            font-weight: 600;
+            font-family: 'Cinzel', serif;
+        }
+
+        #game-board {
+            flex: 1;
+            width: 100%;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            align-content: center;
+            gap: 16px 20px;
+            padding: 20px 0;
+            max-height: calc(100vh - 200px);
+            overflow-y: auto;
+        }
+
+        .bottle {
+            width: 60px;
+            height: 195px;
+            background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%);
+            border: 2px solid rgba(255, 255, 255, 0.25);
+            border-top: none;
+            border-radius: 0 0 24px 24px;
+            position: relative;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column-reverse;
+            align-items: center;
+            padding: 6px;
+            gap: 5px;
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease, border-color 1.5s ease;
+            backdrop-filter: blur(8px);
+        }
+
+        .bottle::before {
+            content: '';
+            position: absolute;
+            top: -8px;
+            width: 68px;
+            height: 8px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .bottle.selected {
+            transform: translateY(-20px) scale(1.03);
+            border-color: var(--theme-accent);
+            box-shadow: 0 15px 30px rgba(212, 175, 55, 0.3);
+        }
+
+        .bottle.completed {
+            border-color: rgba(255, 215, 0, 0.6);
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+        }
+
+        .gem {
+            width: 100%;
+            height: 40px;
+            border-radius: 10px;
+            position: relative;
+            box-shadow: inset 0 3px 6px rgba(255,255,255,0.6), inset 0 -4px 8px rgba(0,0,0,0.5);
+            overflow: hidden;
+            transition: transform 0.35s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        .gem::after {
+            content: '';
+            position: absolute;
+            top: 10%;
+            left: 15%;
+            width: 40%;
+            height: 35%;
+            background: linear-gradient(135deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 100%);
+            border-radius: 6px 2px 6px 2px;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(4, 5, 12, 0.85);
+            backdrop-filter: blur(12px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+        }
+
+        .modal-overlay.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-content {
+            background: var(--glass-bg);
+            border: 1px solid var(--theme-accent);
+            border-radius: 28px;
+            padding: 35px;
+            text-align: center;
+            max-width: 380px;
+            width: 85%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+            transition: border-color 1.5s ease;
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="fx-canvas"></canvas>
+    <div id="breathing-halo" class="breathing-halo"></div>
+
+    <!-- 癒やしロード画面 -->
+    <div id="loading-screen">
+        <div class="loader-gem-wrapper">
+            <div class="loader-ring"></div>
+            <div class="loader-gem"></div>
+        </div>
+        <div class="loading-title">PAUSE & BREATHE</div>
+        <div class="column-box">
+            <div class="column-label">HEALING COLUMN</div>
+            <div id="column-title" class="column-title"></div>
+            <div id="column-text" class="column-text"></div>
+        </div>
+    </div>
+
+    <!-- 1. ホーム画面 -->
+    <div id="home-screen" class="screen active">
+        <div class="home-title-box">
+            <h1>LUMINA JEWELS</h1>
+            <p>SCIENTIFIC HEALING COLOR SORT</p>
+            <div id="home-realm-tag" class="realm-tag">REALM I: STARLIGHT</div>
+        </div>
+        <div class="breath-guide" id="breath-text">BREATHE IN...</div>
+        <div class="home-menu">
+            <button id="btn-play" class="btn-action">PLAY GAME</button>
+            <button id="btn-stages" class="btn-action">STAGES</button>
+            <button id="btn-titles" class="btn-action">TITLES</button>
+        </div>
+        <div style="display: flex; gap: 15px;">
+            <button id="home-bgm-toggle" class="icon-btn" title="432Hz/528Hz Binaural Sound">♫</button>
+            <button id="home-sfx-toggle" class="icon-btn active" title="Sound Effects">🔊</button>
+        </div>
+    </div>
+
+    <!-- 2. ステージ選択画面 -->
+    <div id="stage-screen" class="screen">
+        <div class="stage-header">
+            <button id="btn-back-stage" class="btn-action">← BACK</button>
+            <h2>SELECT STAGE</h2>
+            <div style="width: 80px;"></div>
+        </div>
+        <div id="stage-grid" class="stage-grid"></div>
+    </div>
+
+    <!-- 3. 称号画面 -->
+    <div id="titles-screen" class="screen">
+        <div class="stage-header">
+            <button id="btn-back-titles" class="btn-action">← BACK</button>
+            <h2>TITLES</h2>
+            <div style="width: 80px;"></div>
+        </div>
+        <div id="titles-container" class="titles-container"></div>
+    </div>
+
+    <!-- 4. メインゲーム画面 -->
+    <div id="game-screen" class="screen">
+        <header>
+            <div class="game-nav">
+                <button id="btn-back-game" class="btn-action" style="padding: 6px 16px; font-size: 0.8rem;">MENU</button>
+                <div style="text-align: center;">
+                    <h1 style="font-size: 1.1rem;">LUMINA JEWELS</h1>
+                    <div id="game-realm-tag" class="realm-tag" style="font-size: 0.65rem; margin:0;">REALM I: STARLIGHT</div>
+                </div>
+                <button id="game-bgm-toggle" class="icon-btn" style="width: 34px; height: 34px;">♫</button>
+            </div>
+            <div class="status-bar">
+                <span>STAGE: <span id="stage-num" class="status-val">1</span></span>
+                <span>MOVES: <span id="moves-num" class="status-val">0</span></span>
+                <span>UNDO: <span id="undo-num" class="status-val">5</span></span>
+            </div>
+        </header>
+
+        <main id="game-board"></main>
+
+        <footer style="display: flex; gap: 12px; margin-bottom: 10px;">
+            <button id="undo-btn" class="btn-action">↩ UNDO</button>
+            <button id="reset-btn" class="btn-action">↻ RESET</button>
+            <button id="add-bottle-btn" class="btn-action">+ BOTTLE</button>
+        </footer>
+    </div>
+
+    <!-- クリアモーダル -->
+    <div id="clear-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2>HARMONY</h2>
+            <p id="clear-modal-desc" style="color: var(--text-sub); font-size: 0.85rem;">脳波が整い、完全な静寂が訪れました</p>
+            <button id="next-btn" class="btn-action" style="padding: 12px 36px; margin-top: 10px;">NEXT STAGE</button>
+        </div>
+    </div>
+
+    <script>
+        /* --------------------------------------------------
+         * 1. 癒やしの雑学コラムデータ (全12種)
+         * -------------------------------------------------- */
+        const HEALING_COLUMNS = [
+            {
+                title: "528Hzの奇跡の周波数",
+                text: "528Hzの音波は「ソルフェジオ周波数」と呼ばれ、副交感神経を優位にし、ストレスホルモンの分泌を抑えて脳をリフレッシュさせる効果が実証されています。"
+            },
+            {
+                title: "宝石が神秘的に輝く理由",
+                text: "ダイヤモンドなどの宝石は、光を内部で「全反射」させるファセットカットによって輝きます。この光の揺らぎは脳に自然界の安心感を与えます。"
+            },
+            {
+                title: "「1/fゆらぎ」の癒やし",
+                text: "小川のせせらぎや木漏れ日には「1/fゆらぎ」という規則性とランダムの調和が存在します。人の心拍リズムと同調し、深いリラックスをもたらします。"
+            },
+            {
+                title: "4-7-8 呼吸法と迷走神経",
+                text: "「4秒吸い、7秒止め、8秒吐く」呼吸法を行うと、自律神経の迷走神経が刺激され、心拍数が自然と下がって脳が瞑想状態に入ります。"
+            },
+            {
+                title: "バイノーラルビートの仕組み",
+                text: "左右の耳でわずかに周波数の異なる音を聞くと、脳内にその周波数差（うなり）が発生します。10Hz差の音は脳波を集中とリラックスの「α波」へ導きます。"
+            },
+            {
+                title: "ピンクノイズと深い眠り",
+                text: "雨音や波音に含まれるピンクノイズは、高周波ほどエネルギーが減衰する音波です。脳波のスパイクを和らげ、精神の安定を助けます。"
+            },
+            {
+                title: "色の魔法（カラーセラピー）",
+                text: "深い青は視床下部を刺激して体温や血圧を落ち着かせ、翡翠色は脳の緊張を和らげます。色の調和を見るだけで脳の疲労が軽減されます。"
+            },
+            {
+                title: "ルビーの赤と情熱",
+                text: "古代からルビーは「不死の石」と信じられてきました。美しい赤の光彩線は心理的に気力を支え、かすかな安心感を与えます。"
+            },
+            {
+                title: "深海の青と脳波（θ波）",
+                text: "深海のグラデーションを見つめると、脳波はまどろみや閃きを生む「θ波」に近づきます。視覚的な静けさが思考の雑音を消してくれます。"
+            },
+            {
+                title: "指先の触感覚（ASMR）",
+                text: "微細な振動や流体の動きを目で追うと、脳の感覚野が刺激され「触覚的ASMR」が発生します。これがパズルの快感へとつながります。"
+            },
+            {
+                title: "瞑想と脳のデフォルト・モード・ネットワーク",
+                text: "ボーッと色を眺めているとき、脳の「DMN（初期状態ネットワーク）」が休息に入ります。一呼吸置くことで脳疲労が回復します。"
+            },
+            {
+                title: "クリスタル（水晶）の規則性",
+                text: "水晶の分子構造は完璧な六角形の格子状です。人は幾何学的な対称性や完全な調和を目にすると、無意識に美しさと安心を感じます。"
+            }
+        ];
+
+        /* --------------------------------------------------
+         * 2. 世界観（バイオーム）定義
+         * -------------------------------------------------- */
+        const REALMS = [
+            {
+                name: 'REALM I: STARLIGHT',
+                bgInner: '#0d1224',
+                bgOuter: '#030408',
+                accent: '#d4af37',
+                particleRgb: '212, 175, 55',
+                scale: [216, 270, 324, 432, 528, 648, 720, 864]
+            },
+            {
+                name: 'REALM II: DEEP OCEAN',
+                bgInner: '#061d2a',
+                bgOuter: '#020b12',
+                accent: '#38bdf8',
+                particleRgb: '56, 189, 248',
+                scale: [196, 246, 293, 392, 493, 587, 659, 783]
+            },
+            {
+                name: 'REALM III: FOREST MIST',
+                bgInner: '#0a2218',
+                bgOuter: '#030f0a',
+                accent: '#38ef7d',
+                particleRgb: '56, 239, 125',
+                scale: [220, 261, 329, 392, 440, 523, 659, 783]
+            },
+            {
+                name: 'REALM IV: SUNSET AURORA',
+                bgInner: '#210c24',
+                bgOuter: '#0b030d',
+                accent: '#f472b6',
+                particleRgb: '244, 114, 182',
+                scale: [277, 349, 415, 554, 659, 830, 932, 1108]
+            },
+            {
+                name: 'REALM V: CELESTIAL CRYSTAL',
+                bgInner: '#1a1829',
+                bgOuter: '#07060d',
+                accent: '#c084fc',
+                particleRgb: '192, 132, 252',
+                scale: [261, 329, 392, 523, 659, 783, 1046, 1318]
+            }
+        ];
+
+        function getRealmForStage(stage) {
+            const realmIndex = Math.floor((stage - 1) / 10) % REALMS.length;
+            return REALMS[realmIndex];
+        }
+
+        function applyRealmTheme(realm) {
+            document.documentElement.style.setProperty('--bg-gradient-inner', realm.bgInner);
+            document.documentElement.style.setProperty('--bg-gradient-outer', realm.bgOuter);
+            document.documentElement.style.setProperty('--theme-accent', realm.accent);
+            
+            document.getElementById('home-realm-tag').textContent = realm.name;
+            document.getElementById('game-realm-tag').textContent = realm.name;
+
+            if (audio) {
+                audio.scale = realm.scale;
+            }
+        }
+
+        /* --------------------------------------------------
+         * 3. 宝石パレット & 称号データ
+         * -------------------------------------------------- */
+        const GEM_PALETTE = [
+            { name: 'Ruby', bg: 'radial-gradient(circle at 35% 35%, #ff4d6d, #b7094c)' },
+            { name: 'Sapphire', bg: 'radial-gradient(circle at 35% 35%, #38bdf8, #03045e)' },
+            { name: 'Emerald', bg: 'radial-gradient(circle at 35% 35%, #38ef7d, #11998e)' },
+            { name: 'Topaz', bg: 'radial-gradient(circle at 35% 35%, #ffe600, #d45d00)' },
+            { name: 'Amethyst', bg: 'radial-gradient(circle at 35% 35%, #c084fc, #581c87)' },
+            { name: 'Diamond', bg: 'radial-gradient(circle at 35% 35%, #ffffff, #94a3b8)' },
+            { name: 'Rose Quartz', bg: 'radial-gradient(circle at 35% 35%, #f472b6, #9d174d)' },
+            { name: 'Aquamarine', bg: 'radial-gradient(circle at 35% 35%, #67e8f9, #155e75)' },
+            { name: 'Garnet', bg: 'radial-gradient(circle at 35% 35%, #e11d48, #4c0519)' },
+            { name: 'Peridot', bg: 'radial-gradient(circle at 35% 35%, #a3e635, #3f6212)' }
+        ];
+
+        const TITLES_DATA = [
+            { id: 1, name: '脳波の静寂', desc: 'ステージ1をクリアする', icon: '🧠', condition: (m) => m >= 2 },
+            { id: 2, name: '深海への旅立ち', desc: 'ステージ10を突破し領域を移行する', icon: '🌊', condition: (m) => m >= 11 },
+            { id: 3, name: '新緑の息吹', desc: 'ステージ20を突破し領域を移行する', icon: '🌿', condition: (m) => m >= 21 },
+            { id: 4, name: '黄昏の瞑想者', desc: 'ステージ30を突破し領域を移行する', icon: '🌅', condition: (m) => m >= 31 },
+            { id: 5, name: '究極の自律神経調和', desc: '全100ステージをクリアする', icon: '👑', condition: (m) => m >= 101 }
+        ];
+
+        /* --------------------------------------------------
+         * 4. 音響エンジン
+         * -------------------------------------------------- */
+        class ScientificAudioEngine {
+            constructor() {
+                this.ctx = null;
+                this.bgmEnabled = false;
+                this.sfxEnabled = true;
+                this.scale = REALMS[0].scale;
+                this.bgmGain = null;
+                this.pinkNoiseNode = null;
+                this.bgmOscs = [];
+                this.bgmTimer = null;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            }
+
+            vibrate(ms = 12) {
+                if (navigator.vibrate) {
+                    try { navigator.vibrate(ms); } catch (e) {}
+                }
+            }
+
+            playGemTouch() {
+                if (!this.sfxEnabled) return;
+                this.init();
+                this.vibrate(8);
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(this.scale[3] * 2, now);
+
+                gain.gain.setValueAtTime(0.001, now);
+                gain.gain.exponentialRampToValueAtTime(0.12, now + 0.02);
+                gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.6);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(now + 0.6);
+            }
+
+            playLiquidPour() {
+                if (!this.sfxEnabled) return;
+                this.init();
+                this.vibrate(15);
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(this.scale[0], now);
+                osc.frequency.exponentialRampToValueAtTime(this.scale[2], now + 0.12);
+
+                gain.gain.setValueAtTime(0.01, now);
+                gain.gain.exponentialRampToValueAtTime(0.1, now + 0.04);
+                gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.3);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(now + 0.3);
+            }
+
+            playCompleteHarp() {
+                if (!this.sfxEnabled) return;
+                this.init();
+                this.vibrate([20, 30, 20]);
+                const notes = [this.scale[0], this.scale[3], this.scale[4], this.scale[7]];
+                notes.forEach((freq, idx) => {
+                    setTimeout(() => {
+                        const now = this.ctx.currentTime;
+                        const osc = this.ctx.createOscillator();
+                        const gain = this.ctx.createGain();
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(freq, now);
+
+                        gain.gain.setValueAtTime(0.001, now);
+                        gain.gain.exponentialRampToValueAtTime(0.08, now + 0.03);
+                        gain.gain.exponentialRampToValueAtTime(0.0001, now + 1.2);
+
+                        osc.connect(gain);
+                        gain.connect(this.ctx.destination);
+                        osc.start();
+                        osc.stop(now + 1.2);
+                    }, idx * 70);
+                });
+            }
+
+            createPinkNoiseNode() {
+                const bufferSize = this.ctx.sampleRate * 2;
+                const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                const output = buffer.getChannelData(0);
+                let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+
+                for (let i = 0; i < bufferSize; i++) {
+                    const white = Math.random() * 2 - 1;
+                    b0 = 0.99886 * b0 + white * 0.0555179;
+                    b1 = 0.99332 * b1 + white * 0.0750759;
+                    b2 = 0.96900 * b2 + white * 0.1538520;
+                    b3 = 0.86650 * b3 + white * 0.3104856;
+                    b4 = 0.55000 * b4 + white * 0.5329522;
+                    b5 = -0.7616 * b5 - white * 0.0168980;
+                    output[i] = b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362;
+                    output[i] *= 0.015;
+                    b6 = white * 0.115926;
+                }
+
+                const noise = this.ctx.createBufferSource();
+                noise.buffer = buffer;
+                noise.loop = true;
+                return noise;
+            }
+
+            toggleBGM() {
+                this.init();
+                this.bgmEnabled = !this.bgmEnabled;
+                if (this.bgmEnabled) {
+                    this.startBGM();
+                } else {
+                    this.stopBGM();
+                }
+                return this.bgmEnabled;
+            }
+
+            startBGM() {
+                this.bgmGain = this.ctx.createGain();
+                this.bgmGain.gain.setValueAtTime(0.025, this.ctx.currentTime);
+                this.bgmGain.connect(this.ctx.destination);
+
+                const merger = this.ctx.createChannelMerger(2);
+                
+                const oscLeft = this.ctx.createOscillator();
+                oscLeft.type = 'sine';
+                oscLeft.frequency.setValueAtTime(216, this.ctx.currentTime);
+                oscLeft.connect(merger, 0, 0);
+
+                const oscRight = this.ctx.createOscillator();
+                oscRight.type = 'sine';
+                oscRight.frequency.setValueAtTime(226, this.ctx.currentTime);
+                oscRight.connect(merger, 0, 1);
+
+                merger.connect(this.bgmGain);
+                oscLeft.start();
+                oscRight.start();
+                this.bgmOscs.push(oscLeft, oscRight);
+
+                this.pinkNoiseNode = this.createPinkNoiseNode();
+                this.pinkNoiseNode.connect(this.bgmGain);
+                this.pinkNoiseNode.start();
+
+                const loopChime = () => {
+                    if (!this.bgmEnabled) return;
+                    const freq = this.scale[Math.floor(Math.random() * this.scale.length)];
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+
+                    gain.gain.setValueAtTime(0.001, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.02, this.ctx.currentTime + 0.5);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + 4.0);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + 4.0);
+
+                    const interval = 2500 + Math.pow(Math.random(), 2) * 3000;
+                    this.bgmTimer = setTimeout(loopChime, interval);
+                };
+                loopChime();
+            }
+
+            stopBGM() {
+                if (this.bgmGain) {
+                    this.bgmGain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + 0.5);
+                }
+                setTimeout(() => {
+                    this.bgmOscs.forEach(o => o.stop());
+                    this.bgmOscs = [];
+                    if (this.pinkNoiseNode) this.pinkNoiseNode.stop();
+                    clearTimeout(this.bgmTimer);
+                }, 500);
+            }
+        }
+
+        /* --------------------------------------------------
+         * 5. 視覚エフェクト
+         * -------------------------------------------------- */
+        const canvas = document.getElementById('fx-canvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        class OneOverFParticle {
+            constructor() { this.reset(); }
+            reset() {
+                this.x = Math.random() * canvas.width;
+                this.y = canvas.height + 10;
+                this.size = Math.random() * 2 + 0.5;
+                this.alpha = Math.random() * 0.4 + 0.1;
+                this.speedY = -(0.1 + Math.pow(Math.random(), 2) * 0.4);
+                this.fade = 0.001 + Math.random() * 0.002;
+            }
+            update() {
+                this.y += this.speedY;
+                this.alpha -= this.fade;
+                if (this.alpha <= 0 || this.y < -10) this.reset();
+            }
+            draw() {
+                const realm = getRealmForStage(currentStage);
+                ctx.fillStyle = `rgba(${realm.particleRgb}, ${this.alpha})`;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+        for (let i = 0; i < 60; i++) particles.push(new OneOverFParticle());
+
+        function loopFX() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            particles.forEach(p => { p.update(); p.draw(); });
+            requestAnimationFrame(loopFX);
+        }
+        loopFX();
+
+        const breathTextEl = document.getElementById('breath-text');
+        let breathStartTime = Date.now();
+
+        function updateBreathingLoop() {
+            const elapsed = ((Date.now() - breathStartTime) % 19000) / 1000;
+            let scale = 1;
+            let opacity = 0.15;
+            let text = "BREATHE IN...";
+
+            if (elapsed < 4) {
+                const progress = elapsed / 4;
+                scale = 1 + progress * 0.35;
+                opacity = 0.15 + progress * 0.2;
+                text = "BREATHE IN... (4s)";
+            } else if (elapsed < 11) {
+                scale = 1.35;
+                opacity = 0.35;
+                text = "HOLD... (7s)";
+            } else {
+                const progress = (elapsed - 11) / 8;
+                scale = 1.35 - progress * 0.35;
+                opacity = 0.35 - progress * 0.2;
+                text = "EXHALE... (8s)";
+            }
+
+            document.documentElement.style.setProperty('--pulse-scale', scale);
+            document.documentElement.style.setProperty('--pulse-opacity', opacity);
+            if (breathTextEl) breathTextEl.textContent = text;
+
+            requestAnimationFrame(updateBreathingLoop);
+        }
+        updateBreathingLoop();
+
+        /* --------------------------------------------------
+         * 6. ロード画面 & ゲーム遷移
+         * -------------------------------------------------- */
+        const audio = new ScientificAudioEngine();
+        const BOTTLE_CAPACITY = 4;
+
+        let maxUnlockedStage = parseInt(localStorage.getItem('lumina_max_stage') || '1');
+        let currentStage = 1;
+        let moves = 0;
+        let undoRemaining = 5;
+        let bottles = [];
+        let selectedIdx = null;
+        let moveHistory = [];
+        let extraBottleAdded = false;
+
+        const screens = {
+            home: document.getElementById('home-screen'),
+            stage: document.getElementById('stage-screen'),
+            titles: document.getElementById('titles-screen'),
+            game: document.getElementById('game-screen')
+        };
+
+        const loadingScreenEl = document.getElementById('loading-screen');
+        const columnTitleEl = document.getElementById('column-title');
+        const columnTextEl = document.getElementById('column-text');
+
+        function showScreen(screenKey) {
+            Object.keys(screens).forEach(key => {
+                screens[key].classList.toggle('active', key === screenKey);
+            });
+        }
+
+        // 癒やしのトランジション（ロード画面を挟む）
+        function transitionToStage(targetStage) {
+            // コラムをランダム選択
+            const randomCol = HEALING_COLUMNS[Math.floor(Math.random() * HEALING_COLUMNS.length)];
+            columnTitleEl.textContent = randomCol.title;
+            columnTextEl.textContent = randomCol.text;
+
+            // ロード画面表示
+            loadingScreenEl.classList.add('show');
+
+            // 2.8秒後に新しいステージへ移行
+            setTimeout(() => {
+                startStage(targetStage);
+                setTimeout(() => {
+                    loadingScreenEl.classList.remove('show');
+                }, 400);
+            }, 2800);
+        }
+
+        function getStageConfig(stage) {
+            let colorCount = Math.min(3 + Math.floor((stage - 1) / 12), GEM_PALETTE.length);
+            return { colorCount, bottleCount: colorCount + 2 };
+        }
+
+        function generateLevel(stage) {
+            const config = getStageConfig(stage);
+            let gems = [];
+            for (let c = 0; c < config.colorCount; c++) {
+                for (let i = 0; i < BOTTLE_CAPACITY; i++) gems.push(c);
+            }
+            for (let i = gems.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [gems[i], gems[j]] = [gems[j], gems[i]];
+            }
+            let res = Array.from({ length: config.bottleCount }, () => []);
+            gems.forEach((g, idx) => res[Math.floor(idx / BOTTLE_CAPACITY)].push(g));
+            return res;
+        }
+
+        function startStage(stage) {
+            currentStage = stage;
+            moves = 0;
+            undoRemaining = 5;
+            selectedIdx = null;
+            moveHistory = [];
+            extraBottleAdded = false;
+
+            const realm = getRealmForStage(stage);
+            applyRealmTheme(realm);
+
+            document.getElementById('stage-num').textContent = currentStage;
+            document.getElementById('moves-num').textContent = moves;
+            document.getElementById('undo-num').textContent = undoRemaining;
+            document.getElementById('undo-btn').disabled = true;
+            document.getElementById('add-bottle-btn').disabled = false;
+
+            bottles = generateLevel(stage);
+            renderBoard();
+            showScreen('game');
+        }
+
+        function renderBoard() {
+            const boardEl = document.getElementById('game-board');
+            boardEl.innerHTML = '';
+
+            bottles.forEach((bottle, bIdx) => {
+                const bottleEl = document.createElement('div');
+                bottleEl.className = 'bottle';
+                if (bIdx === selectedIdx) bottleEl.classList.add('selected');
+                if (bottle.length === BOTTLE_CAPACITY && bottle.every(v => v === bottle[0])) {
+                    bottleEl.classList.add('completed');
+                }
+
+                bottle.forEach(val => {
+                    const gemEl = document.createElement('div');
+                    gemEl.className = 'gem';
+                    gemEl.style.background = GEM_PALETTE[val].bg;
+                    bottleEl.appendChild(gemEl);
+                });
+
+                bottleEl.addEventListener('click', () => handleBottleClick(bIdx));
+                boardEl.appendChild(bottleEl);
+            });
+        }
+
+        function handleBottleClick(idx) {
+            audio.init();
+
+            if (selectedIdx === null) {
+                if (bottles[idx].length > 0) {
+                    selectedIdx = idx;
+                    audio.playGemTouch();
+                    renderBoard();
+                }
+                return;
+            }
+
+            if (selectedIdx === idx) {
+                selectedIdx = null;
+                renderBoard();
+                return;
+            }
+
+            const from = selectedIdx, to = idx;
+            if (canPour(from, to)) {
+                moveHistory.push(JSON.parse(JSON.stringify(bottles)));
+                const target = bottles[from][bottles[from].length - 1];
+
+                while (bottles[from].length > 0 && bottles[from][bottles[from].length - 1] === target && bottles[to].length < BOTTLE_CAPACITY) {
+                    bottles[to].push(bottles[from].pop());
+                }
+
+                moves++;
+                document.getElementById('moves-num').textContent = moves;
+                document.getElementById('undo-btn').disabled = undoRemaining <= 0;
+                selectedIdx = null;
+
+                audio.playLiquidPour();
+                if (bottles[to].length === BOTTLE_CAPACITY && bottles[to].every(v => v === bottles[to][0])) {
+                    setTimeout(() => audio.playCompleteHarp(), 100);
+                }
+
+                renderBoard();
+                checkClear();
+            } else {
+                selectedIdx = bottles[to].length > 0 ? to : null;
+                if (selectedIdx) audio.playGemTouch();
+                renderBoard();
+            }
+        }
+
+        function canPour(from, to) {
+            if (bottles[from].length === 0 || bottles[to].length === BOTTLE_CAPACITY) return false;
+            return bottles[to].length === 0 || bottles[to][bottles[to].length - 1] === bottles[from][bottles[from].length - 1];
+        }
+
+        function checkClear() {
+            const isClear = bottles.every(b => b.length === 0 || (b.length === BOTTLE_CAPACITY && b.every(v => v === b[0])));
+            if (isClear) {
+                if (currentStage >= maxUnlockedStage) {
+                    maxUnlockedStage = currentStage + 1;
+                    localStorage.setItem('lumina_max_stage', maxUnlockedStage.toString());
+                }
+
+                const descEl = document.getElementById('clear-modal-desc');
+                if (currentStage % 10 === 0) {
+                    descEl.textContent = `祝！領域を突破し、次の世界観（REALM）が開かれました。`;
+                } else {
+                    descEl.textContent = `脳波が整い、完全な静寂が訪れました`;
+                }
+
+                setTimeout(() => {
+                    document.getElementById('clear-modal').classList.add('show');
+                }, 300);
+            }
+        }
+
+        function renderStageGrid() {
+            const gridEl = document.getElementById('stage-grid');
+            gridEl.innerHTML = '';
+            for (let i = 1; i <= 100; i++) {
+                const card = document.createElement('div');
+                const isMilestone = i % 10 === 0;
+                card.className = `stage-card ${i > maxUnlockedStage ? 'locked' : ''} ${isMilestone ? 'milestone' : ''}`;
+                card.innerHTML = `<span>${i}</span>${isMilestone ? '<span style="font-size:0.5rem; opacity:0.8;">REALM</span>' : ''}`;
+                if (i <= maxUnlockedStage) {
+                    card.addEventListener('click', () => transitionToStage(i));
+                }
+                gridEl.appendChild(card);
+            }
+        }
+
+        function renderTitles() {
+            const container = document.getElementById('titles-container');
+            container.innerHTML = '';
+            TITLES_DATA.forEach(t => {
+                const unlocked = t.condition(maxUnlockedStage);
+                const card = document.createElement('div');
+                card.className = `title-card ${unlocked ? 'unlocked' : 'locked'}`;
+                card.innerHTML = `
+                    <div style="font-size: 2rem;">${t.icon}</div>
+                    <div>
+                        <h3 style="font-family:'Cinzel',serif; color:var(--theme-accent);">${t.name}</h3>
+                        <p style="color:var(--text-sub); font-size:0.8rem;">${t.desc}</p>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // イベントリスナー
+        document.getElementById('btn-play').addEventListener('click', () => transitionToStage(maxUnlockedStage <= 100 ? maxUnlockedStage : 100));
+        document.getElementById('btn-stages').addEventListener('click', () => { renderStageGrid(); showScreen('stage'); });
+        document.getElementById('btn-titles').addEventListener('click', () => { renderTitles(); showScreen('titles'); });
+
+        document.getElementById('btn-back-stage').addEventListener('click', () => showScreen('home'));
+        document.getElementById('btn-back-titles').addEventListener('click', () => showScreen('home'));
+        document.getElementById('btn-back-game').addEventListener('click', () => showScreen('home'));
+
+        document.getElementById('undo-btn').addEventListener('click', () => {
+            if (moveHistory.length > 0 && undoRemaining > 0) {
+                bottles = moveHistory.pop();
+                undoRemaining--;
+                document.getElementById('undo-num').textContent = undoRemaining;
+                renderBoard();
+            }
+        });
+
+        document.getElementById('add-bottle-btn').addEventListener('click', () => {
+            if (!extraBottleAdded) {
+                bottles.push([]);
+                extraBottleAdded = true;
+                document.getElementById('add-bottle-btn').disabled = true;
+                renderBoard();
+            }
+        });
+
+        document.getElementById('reset-btn').addEventListener('click', () => transitionToStage(currentStage));
+        document.getElementById('next-btn').addEventListener('click', () => {
+            document.getElementById('clear-modal').classList.remove('show');
+            transitionToStage(Math.min(currentStage + 1, 100));
+        });
+
+        const toggleBGM = (btn) => {
+            const active = audio.toggleBGM();
+            btn.classList.toggle('active', active);
+        };
+        document.getElementById('home-bgm-toggle').addEventListener('click', function() { toggleBGM(this); });
+        document.getElementById('game-bgm-toggle').addEventListener('click', function() { toggleBGM(this); });
+        document.getElementById('home-sfx-toggle').addEventListener('click', function() {
+            audio.sfxEnabled = !audio.sfxEnabled;
+            this.classList.toggle('active', audio.sfxEnabled);
+        });
+
+        // 初期化
+        applyRealmTheme(getRealmForStage(maxUnlockedStage <= 100 ? maxUnlockedStage : 100));
+    </script>
+</body>
+</html>
